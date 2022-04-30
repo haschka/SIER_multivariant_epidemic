@@ -9,7 +9,7 @@
 #include<math.h>
 #include<time.h>
 #include"runge-kutta-fehlberg.h"
-#include"covid.h"
+#include"epidemic.h"
 
 typedef struct {
   double** points;
