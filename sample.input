@@ -1,0 +1,42 @@
+runtime 730
+error_tolerance 1e-8
+
+n_variants 2
+n_classes 3
+
+Rzero 1.2 1.5
+variant_introduction_date 0. 150.
+
+total_population 6.7e7
+population_class_distribution 0.239 0.554 0.207
+contacts_between_classes 5.29 5.52 0.34  2.3 10.06 1.05  0.5 3.68 1.91
+reporting_rate 0.5
+asymptomatics_fraction 0.5 0.5   0.5 0.5   0.5 0.5
+initial_intermediate_fraction 2.9850746e-05 2.9850746e-05  2.9850746e-05 2.9850746e-05  2.9850746e-05 2.9850746e-05
+initial_infected_fraction 1.4925373e-05 1.4925373e-05  1.4925373e-05 1.4925373e-05   1.4925373e-05 1.4925373e-05
+
+epsilon 1. 1. 1. 1.  1. 1. 1. 1.  1. 1. 1. 1.  1. 1. 1. 1.
+
+# I -> R
+recovery_rate 0.2 0.2
+
+# E -> I
+conversion_rate 0.34483 0.34483
+
+pre_immune_fraction 0.1 0.1 0.1
+
+sigma 0.39 0.82 0.77  0.39 0.82 0.77
+
+# R -> S     v1a1 v1a2  
+immune_drain 0.01 0.01  0.01 0.01  0.01 0.01
+
+# V -> s
+vaccine_drain 0.005 0.005  0.005 0.005  0.005 0.005
+
+vaccine_logistic_maximum 0 0 0  
+vaccine_logistic_growth 0.0292 0.0292 0.0292 0.0292  0.0292 0.0292 0.0292 0.0292  0.0292 0.0292 0.0292 0.0292 
+vaccine_logistic_midpoint 192.755 192.755 192.755 192.755  192.755 192.755 192.755 192.755 192.755  192.755 192.755 192.755
+
+vaccine_efficiency 0.8 0.6  0.8 0.6  0.8 0.6 
+
+
