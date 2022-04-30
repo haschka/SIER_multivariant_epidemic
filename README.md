@@ -1,2 +1,21 @@
-# SIER_multivariant_epidemic
-An model for multivariant epidemics
+# A multivariant, multi-class (i.e. ages) SEIR epidemic simulator
+
+This model simulates a multivariant SEIR epidemic with cross immunity between variants, a
+preimmune population and an ongoing vaccination campain, the later is untested. 
+
+# Compilation i.e. with gcc
+```
+gcc -O3 -march=native execute_model.c epidemic.c rkf.c parser.c -lm -llapack -o execute-model
+```
+
+# Epidemic simulation
+Performing an epidemic simulation requires a prepared input file in keyword-value format.
+An example can be found in example.input. 
+The simulator generates trajectories written to standard out in tab seperated format.
+The first column referes to the simulation time,
+follwing by the S I E R compartments.
+Depending on how many age classes, variants you simulate you will ecounter multiple columns.
+```
+./execute-model sample.input
+```
+should yield an epidemic trajectory
