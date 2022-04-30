@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include<unistd.h>
 #include<stdio.h>
 #include<string.h>
 #include<float.h>
@@ -18,6 +19,12 @@ typedef struct {
   double preinfected;
   double age_classes[3];
   double total_population;
+  double r_first_question[3];
+  double r_first;
+  double Inc_first_question[3];
+  double Inc_first;
+  int windowsize;
+  double start_date_offset;
 } track;
 
 typedef struct {
@@ -81,7 +88,87 @@ double measure_error(track_dataset tra, trajectory_dataset trjs,
   return(error);
 }
 
-void read_track_point_file(char* filename, track* tracks, size_t n_variants) {
+int determine_Inc_R_at_departure(track* t) {
+
+  int i;
+  struct tm times[3];
+  struct tm initial_time;
+
+  time_t times_t[3];
+  time_t initial_time_t;
+
+  double delta_time[3];
+
+  double interval_time_delta;
+  double delta_R;
+  double delta_Inc;
+  double delta_t;
+  
+  const char* dates[] = { "2021-12-06", "2021-12-13", "2021-12-20" };
+
+  memset(&initial_time,0,sizeof(struct tm));
+  strptime("2021-12-01","%Y-%m-%d", &initial_time);
+  initial_time_t = mktime(&initial_time);
+  
+  for(i=0;i<3;i++) {
+    memset(times+i,0,sizeof(struct tm));
+    strptime(dates[i],"%Y-%m-%d", times+i);
+    times_t[i] = mktime(times+i);
+
+    delta_time[i] = ((double)times_t[i]- (double)initial_time_t)/86400;
+  }
+
+  /* Handle edge cases */
+  
+  if(t->start_date_offset <= delta_time[0]) {
+    t->r_first = t->r_first_question[0];
+    t->Inc_first = t->Inc_first_question[0];
+    goto Inc_R_determinated;
+  }
+
+  if(t->start_date_offset == delta_time[1]) {
+    t->r_first = t->r_first_question[1];
+    t->Inc_first = t->Inc_first_question[1];
+    goto Inc_R_determinated;
+  }
+    
+  if(t->start_date_offset >= delta_time[2]) {
+    t->r_first = t->r_first_question[2];
+    t->Inc_first = t->Inc_first_question[2];
+    goto Inc_R_determinated;
+  }
+
+  /* Handle inbetween cases */
+  
+  for(i=0;i<2;i++) {
+  
+    if (delta_time[i] < t->start_date_offset &&
+	t->start_date_offset < delta_time[i+1]) {
+      
+      interval_time_delta = delta_time[i] - t->start_date_offset;
+      
+      delta_R = t->r_first_question[i] - t->r_first_question[i+1];
+      delta_Inc = t->Inc_first_question[i] - t->Inc_first_question[i+1];
+      
+      delta_t = delta_time[i+1]-delta_time[i];
+      
+      t->r_first =
+	t->r_first_question[i] + delta_R*(interval_time_delta/delta_t);
+      t->Inc_first =
+	t->Inc_first_question[i] + delta_Inc*(interval_time_delta/delta_t);
+
+      goto Inc_R_determinated;
+    }
+    
+  }
+  
+ Inc_R_determinated:
+  return(0);
+  
+}
+  
+void read_track_point_file(char* filename, track* tracks,
+			   size_t n_variants, int windowsize) {
 
   FILE* trackfile = fopen(filename, "r");
 
@@ -104,6 +191,11 @@ void read_track_point_file(char* filename, track* tracks, size_t n_variants) {
 
   int line_scan_offset;
   int offset_adder;
+
+  size_t midpoint;
+
+  track replacement_track;
+  double initial_replacement_time;
   
   double* variant_percentage = (double*)malloc(sizeof(double)*n_variants);
 
@@ -111,7 +203,7 @@ void read_track_point_file(char* filename, track* tracks, size_t n_variants) {
   memset(&current_time,0,sizeof(struct tm));
       
   rewind(trackfile);
-  strptime("2021-12-21","%Y-%m-%d", &initial_time);
+  strptime("2021-12-01","%Y-%m-%d", &initial_time);
   /*  strptime("2021-02-15","%Y-%m-%d", &initial_time); */
   initial_time_t = mktime(&initial_time);
   
@@ -161,19 +253,58 @@ void read_track_point_file(char* filename, track* tracks, size_t n_variants) {
       }
     }	
   }
-  if(n_values != 0) {
-    for(i=0;i<n_variants;i++) {
-      
-      tracks->points[i] =
-	(double*)realloc(tracks->points[i], sizeof(double)*(n_values));
+
+  for(i=0;i<n_values;i++) {
+    if(tracks->points[0][i] < 0.5) {
+      midpoint = i;
+      goto found_midpoint;
     }
-    tracks->t =
-      (double*)realloc(tracks->t, sizeof(double)*(n_values));
   }
+
+  /* if midpoint is not found */
+  midpoint = 32;
+  
+  fprintf(stderr,"Warning! No midpoint found in dataset set midpoint to 0+32");
+  
+ found_midpoint:
+
+  if( (long)((long)midpoint-(long)windowsize) >= 0 &&
+      midpoint+windowsize <=n_values) {
+    replacement_track.t = (double*)malloc(sizeof(double)*2*windowsize);
+    replacement_track.points = (double**)malloc(sizeof(double*)*n_variants);
+    memcpy(replacement_track.t,
+	   tracks->t+(midpoint-windowsize),
+	   sizeof(double)*2*windowsize);
+
+    free(tracks->t);
+    initial_replacement_time = replacement_track.t[0];
+    printf("Inital_time: %lf for track %s", initial_replacement_time, filename);
+
+    for(i=0;i<2*windowsize;i++) {
+      replacement_track.t[i] -= initial_replacement_time;
+    }
+    tracks->t = replacement_track.t;
+    
+    for(i=0;i<n_variants;i++) {
+      replacement_track.points[i] =
+	(double*)malloc(sizeof(double)*2*windowsize);
+      memcpy(replacement_track.points[i],
+	     tracks->points[i]+(midpoint-windowsize),
+	     sizeof(double)*2*windowsize);
+      free(tracks->points[i]);
+      tracks->points[i] = replacement_track.points[i];
+    }
+  } else {
+    fprintf(stderr,"Warning! Midpoint found out of range"
+	    "resetting to generic point\n");
+    midpoint = 32;
+    goto found_midpoint;
+  }
+  tracks->start_date_offset = initial_replacement_time;
   fclose(trackfile);
   free(line);
   free(timebuffer);
-  tracks->n_values = n_values;
+  tracks->n_values = 2*windowsize;
 }
 
 int initialize_gradient_state(size_t index,
@@ -334,7 +465,10 @@ void free_trajectory_dataset(trajectory_dataset trjds) {
   }
 }
 
-track_dataset read_tracks(FILE* in, size_t n_variants, size_t n_classes) {
+
+
+track_dataset read_tracks(FILE* in, size_t n_variants,
+			  size_t n_classes) {
 
   char * line = NULL;
   size_t line_size = 0;
@@ -345,6 +479,9 @@ track_dataset read_tracks(FILE* in, size_t n_variants, size_t n_classes) {
 
   double preinf_buffer;
 
+  double Inc_first_buffer[3];
+  double r_first_buffer[3];
+  
   double age_class_fraction_buffer[3];
   
   double total_population_buffer;
@@ -353,37 +490,56 @@ track_dataset read_tracks(FILE* in, size_t n_variants, size_t n_classes) {
   
   size_t n_tracks =0;
 
+  int windowsize_buffer;
+  
   track_dataset tds;
   
   rewind(in);
   getline(&line,&line_size,in);
 
   while(-1 != getline(&line,&line_size,in)) {
-    if (6 == sscanf(line,
-		    "%*i\t%s\t%lf\t%lf\t%lf\t%lf\t%lf",
-		    track_filename,
-		    &preinf_buffer,
-		    age_class_fraction_buffer,
-		    age_class_fraction_buffer+1,
-		    age_class_fraction_buffer+2,
-		    &total_population_buffer)) {
+    if (10 == sscanf(line,
+		     "%*i\t%s\t%lf\t%lf\t%lf\%lf\t%lf\%lf\t%lf\t%i\t%lf",
+		     track_filename,
+		     &preinf_buffer,
+		     r_first_buffer+0,
+		     r_first_buffer+1,
+		     r_first_buffer+2,
+		     Inc_first_buffer+0,
+		     Inc_first_buffer+1,
+		     Inc_first_buffer+2,		
+		     &windowsize_buffer,
+		     &total_population_buffer)) {
 
       tracks = (track*)realloc(tracks,sizeof(track)*(n_tracks+1));
       tracks[n_tracks].preinfected = preinf_buffer;
-
+      
       if(n_classes == 1) {
 	tracks[n_tracks].age_classes[0] = total_population_buffer;
+	for(i=0;i<3;i++) {
+	  tracks[n_tracks].Inc_first_question[i] = Inc_first_buffer[i];
+	  tracks[n_tracks].r_first_question[i] = r_first_buffer[i];
+	}
+	tracks[n_tracks].windowsize = windowsize_buffer;
       } else {
+	fprintf(stderr,
+		"Fatal: This version only supports a single age class!\n");
+	_exit(1);
+	/*
 	for(i=0;i<n_classes;i++) {
 	  tracks[n_tracks].age_classes[i] = age_class_fraction_buffer[i];
 	}
+	*/
       }
-      
       tracks[n_tracks].total_population = total_population_buffer;
       tracks[n_tracks].n_variants = n_variants;
-      read_track_point_file(track_filename, tracks+n_tracks, n_variants);
+      read_track_point_file(track_filename, tracks+n_tracks,
+			    n_variants, windowsize_buffer);
       n_tracks++;
 
+    } else {
+      fprintf(stderr,"Fatal! Malformed Track File.");
+      _exit(1);
     }
   }
 
@@ -407,12 +563,16 @@ void execute_epidemic_with_track_dataset_conditions(trajectory_dataset* trjds,
     }
 
     if (mp->n_classes > 1) {
-      mp->population_class_distribution = tds->tracks[i].age_classes;
+   /*      mp->population_class_distribution = tds->tracks[i].age_classes; */
+      fprintf(stderr,
+	      "Fatal! This code does not run with multiple age classes\n");
+      _exit(1);
     } else {
       mp->population_class_distribution[0] = 1.;
     }
     mp->total_population = tds->tracks[i].total_population;
-
+    mp->Rzero[0] = tds->tracks[i].r_first;
+    
 
     if(trjds->trjs[i].n_values != 0) {
       for(j=0;j<trjds->trjs[i].n_states;j++) {
@@ -551,7 +711,9 @@ void test_line_search(size_t n_gradient_variables, double* gradient,
     printf("\n");
     return;
   }
-}		    
+}
+
+
 						    
 int main(int argc, char** argv) {
 
@@ -596,7 +758,7 @@ int main(int argc, char** argv) {
 
   double** initial_infected_fraction;
   double** initial_intermediate_fraction;
-  
+
   if ( NULL == (input_file = fopen(argv[1],"r"))) {
     printf("Could not open input file %s\n",argv[1]);
     return(1);
@@ -624,6 +786,10 @@ int main(int argc, char** argv) {
   
   tds = read_tracks(track_file, mp.n_variants, mp.n_classes);
 
+  for(i=0;i<tds.n_tracks;i++) {
+    determine_Inc_R_at_departure(tds.tracks+i);
+  }
+  
   initial_intermediate_fraction =
     (double**)malloc(sizeof(double*)*tds.n_tracks);
   initial_infected_fraction =
@@ -642,22 +808,22 @@ int main(int argc, char** argv) {
     for(j=0;j<mp.n_variants;j++) {
       initialization_sum += tds.tracks[i].points[j][0];
     }
-    memcpy(initial_intermediate_fraction[i],
-	   mp.initial_intermediate_fraction,
-	   sizeof(double)*mp.n_variants*mp.n_classes);
-    memcpy(initial_infected_fraction[i],
-	   mp.initial_infected_fraction,
-	   sizeof(double)*mp.n_variants*mp.n_classes);
     for(k=0;k<mp.n_classes;k++) {
       for(j=0;j<mp.n_variants;j++) {
-	initial_intermediate_fraction[i][k*mp.n_variants+j] *=
-	  (tds.tracks[i].points[j][0]/initialization_sum);
-	initial_infected_fraction[i][k*mp.n_variants+j] *=
-	  (tds.tracks[i].points[j][0]/initialization_sum);
+	initial_intermediate_fraction[i][k*mp.n_variants+j] =
+	  (tds.tracks[i].Inc_first/mp.conversion_rate[j])
+	  *(tds.tracks[i].points[j][0]/initialization_sum);
+	initial_infected_fraction[i][k*mp.n_variants+j] =
+	  (tds.tracks[i].Inc_first*mp.recovery_rate[j])
+	  *(tds.tracks[i].points[j][0]/initialization_sum);
       }
     }
   }
- 
+
+  /* warning special startup conditions - not really portable */
+  mp.initial_intermediate_fraction[0] = initial_intermediate_fraction[0][0];
+  mp.initial_infected_fraction[0] = initial_infected_fraction[0][0];
+  
   trjds.n_trjs = tds.n_tracks;
   trjds.trjs = (trajectory*)malloc(sizeof(trajectory)*trjds.n_trjs);
   for(i=0;i<trjds.n_trjs;i++) {
@@ -678,11 +844,19 @@ int main(int argc, char** argv) {
   for(i=0;i<mp.n_classes*mp.n_variants;i++) {
     compartment_indices[i] = mp.E_offset+i;
   }
-
+  
   for(i=0;i<n_gradient_variables;i++) {
     initialize_gradient_state(i,
 			      &mp,
 			      gradient_state);
+  }
+  
+  for(i=0;i<n_gradient_variables;i++) {
+    gradient_state_to_mp(i,&mp,
+			 initial_intermediate_fraction,
+			 initial_infected_fraction,
+			 gradient_state[i]+derivative_delta,
+			 evaluative_gradient_state);
   }
   
   execute_epidemic_with_track_dataset_conditions(&trjds,
