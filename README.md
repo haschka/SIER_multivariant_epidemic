@@ -3,6 +3,8 @@
 This model simulates a multivariant SEIR epidemic with cross immunity between variants, a
 preimmune population and an ongoing vaccination campain, the later is untested. 
 
+In order to use this program you need a c compilier and lapack libraries, i.e. http://www.netlib.org/lapack/
+
 # Compilation i.e. with gcc
 ```
 gcc -O3 -march=native execute_model.c epidemic.c rkf.c parser.c -lm -llapack -o execute-model
@@ -19,3 +21,12 @@ Depending on how many age classes, variants you simulate you will ecounter multi
 ./execute-model sample.input
 ```
 should yield an epidemic trajectory
+
+# Fitting a model to data
+This is experimental and was only developed for in house use
+
+First compile the fit program:
+```
+gcc -O3 -march=native fit-model.c epidemic.c rkf.c parser.c -lm -llapack -o fit-model
+```
+You can then fit to the example data:
