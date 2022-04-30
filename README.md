@@ -30,3 +30,6 @@ First compile the fit program:
 gcc -O3 -march=native fit-model.c epidemic.c rkf.c parser.c -lm -llapack -o fit-model
 ```
 You can then fit to the example data:
+```
+fit-model fit-sample.input fit-sample.table fit-sample.out
+```
