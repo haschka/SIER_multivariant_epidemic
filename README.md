@@ -20,7 +20,8 @@ Depending on how many age classes, variants you simulate you will encounter mult
 ```
 ./execute-model sample.input
 ```
-should yield an epidemic trajectory
+should yield an epidemic trajectory. An a description of the model implemented as well as
+of the input files parameters is found in [documentation/doc.pdf](https://raw.githubusercontent.com/haschka/SIER_multivariant_epidemic/main/documentation/doc.pdf)
 
 ### Fitting a model to data
 This is experimental and was only developed for in house use
