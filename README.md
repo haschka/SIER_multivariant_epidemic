@@ -24,7 +24,8 @@ should yield an epidemic trajectory. An a description of the model implemented a
 of the input files parameters is found in [documentation/doc.pdf](https://raw.githubusercontent.com/haschka/SIER_multivariant_epidemic/main/documentation/doc.pdf)
 
 ### Fitting a model to data
-This is experimental and was only developed for in house use
+This is experimental and was only developed for in house in modelling the SARS-CoV-2 
+epedemic.
 
 First compile the fit program:
 ```
