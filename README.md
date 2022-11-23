@@ -3,6 +3,9 @@
 This model simulates a multivariant SEIR epidemic with cross immunity between variants, a
 preimmune population and an ongoing vaccination campain, the later is untested. 
 
+Please cite: 
+Haschka, T., Vergu, E., Roche, B. et al. Retrospective analysis of SARS-CoV-2 omicron invasion over delta in French regions in 2021–22: a status-based multi-variant model. BMC Infect Dis 22, 815 (2022). [https://doi.org/10.1186/s12879-022-07821-5](https://doi.org/10.1186/s12879-022-07821-5)
+
 In order to use this program you need a c compilier and lapack libraries, i.e. http://www.netlib.org/lapack/
 
 ### Compilation i.e. with gcc
