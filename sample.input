@@ -1,42 +1,72 @@
+#runtime 1 single dimenstion
 runtime 730
+
+# tolerance of the runge kutta algorithm
 error_tolerance 1e-8
 
+# number of varants and number of classes
 n_variants 2
 n_classes 3
 
+# Intrinsic reproduction rate, 1 by variant
 Rzero 1.2 1.5
+
+# Variant introduction date, 1 by variant
 variant_introduction_date 0. 150.
 
+# Total population
 total_population 6.7e7
+
+# Partition into classes, one value per class, sum of values has to be 1
 population_class_distribution 0.239 0.554 0.207
+
+# Contact affinities Classes, non symmetric, Matrix [Classes x Classes]
 contacts_between_classes 5.29 5.52 0.34  2.3 10.06 1.05  0.5 3.68 1.91
-reporting_rate 0.5
-asymptomatics_fraction 0.5 0.5   0.5 0.5   0.5 0.5
+
+# Initial Fraction in E [classes(rows) x variants(columns)]  
 initial_intermediate_fraction 2.9850746e-05 2.9850746e-05  2.9850746e-05 2.9850746e-05  2.9850746e-05 2.9850746e-05
+
+# Initial Fraction in I [classes(rows) x variants(columns)]  
 initial_infected_fraction 1.4925373e-05 1.4925373e-05  1.4925373e-05 1.4925373e-05   1.4925373e-05 1.4925373e-05
 
-epsilon 1. 1. 1. 1.  1. 1. 1. 1.  1. 1. 1. 1.  1. 1. 1. 1.
+# cross immunity [variants x variants]
+epsilon 1. 1.  1. 1.  
 
-# I -> R
-recovery_rate 0.2 0.2
-
-# E -> I
-conversion_rate 0.34483 0.34483
-
+# pre immune fraction [ classes ]
 pre_immune_fraction 0.1 0.1 0.1
 
+# infection affinity for classes [ variants(rows) x classes(columns) ]
 sigma 0.39 0.82 0.77  0.39 0.82 0.77
 
-# R -> S     v1a1 v1a2  
+# E -> I delta 1 value per variant
+conversion_rate 0.34483 0.34483
+
+# I -> R gamma 1 value per variant
+recovery_rate 0.2 0.2
+
+# R -> S eta [ classes(rows) x variants(columns) ]  
 immune_drain 0.01 0.01  0.01 0.01  0.01 0.01
 
-# V -> s
+
+# vaccination
+# vaccine logistic maximum [ variants(rows) x classes(columns) ] deactivate = 0
+vaccine_logistic_maximum 0 0 0  0 0 0
+
+# V -> s [ classes(rows) x variants(columns) ]  
 vaccine_drain 0.005 0.005  0.005 0.005  0.005 0.005
 
-vaccine_logistic_maximum 0 0 0  
-vaccine_logistic_growth 0.0292 0.0292 0.0292 0.0292  0.0292 0.0292 0.0292 0.0292  0.0292 0.0292 0.0292 0.0292 
-vaccine_logistic_midpoint 192.755 192.755 192.755 192.755  192.755 192.755 192.755 192.755 192.755  192.755 192.755 192.755
+# vaccine logistic growth [ variants(rows) x classes(columns) ]
+vaccine_logistic_growth 0.0292 0.0292 0.0292  0.0292 0.0292 0.0292 
 
+# vaccine logistic midpoint [ variants(rows) x classes(columns) ]
+vaccine_logistic_midpoint 192.755 192.755 192.755  192.755 192.755 
+
+# reporting rate
+reporting_rate 0.5
+# proportion of asymptotics [ classes(rows) x variants(columns) ]
+asymptomatics_fraction 0.5 0.5  0.5 0.5  0.5 0.5
+
+# vaccine efficiency [ classes(row) x variants(columns) ]
 vaccine_efficiency 0.8 0.6  0.8 0.6  0.8 0.6 
 
 
